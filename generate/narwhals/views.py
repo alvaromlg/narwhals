@@ -85,3 +85,16 @@ class WorkoutDetail(APIView):
         workout = self.get_object(pk, request.user)
         workout.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class ConfigView(APIView):
+    """
+    API endpoint for config initialization.
+    """
+
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        config = {'min_app_version': 1,
+                  'force_update': 'true',}
+        return Response(config, status=status.HTTP_200_OK)
