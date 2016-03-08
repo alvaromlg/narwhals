@@ -21,31 +21,33 @@ from permissions import IsStaffOrTargetUser
 from serializers import UserSerializer
 
 # Django REST Authentication
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
 logging.basicConfig(filename='/home/apelegrina/logs/user/narwhals.log',level=logging.DEBUG,
         format='%(asctime)s.%(msecs)d %(levelname)s %(module)s - %(funcName)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
 
+
 class UserView(viewsets.ModelViewSet):
-    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     serializer_class = UserSerializer
     model = User
 
+    """
     def get_permissions(self):
         # allow non-authenticated user to create via POST
         return (AllowAny() if self.request.method == 'POST'
                 else IsStaffOrTargetUser()),
-
+    """
 
 class EntrenamientoList(APIView):
     """
     List all entrenamientos, or create a new entrenamiento.
     """
 
-    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, format=None):
@@ -61,28 +63,12 @@ class EntrenamientoList(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-"""
-class CreateRetrieveAPIView(mixins.CreateModelMixin,
-                            mixins.RetrieveModelMixin,
-                            generics.GenericAPIView):
-    Concrete view for creating or retrieving a model instance.
-
-    authentication_classes = (SessionAuthentication, BasicAuthentication)
-    permission_classes = (IsAuthenticated,)
-
-    def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
-
-    def get(self, request, *args, **kwargs):
-        return self.retrieve(request, *args, **kwargs)
-"""
-
 class EntrenamientoDetail(APIView):
     """
     API endpoint for entrenamientos.
     """
 
-    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     def get_object(self, pk, user):
