@@ -10,13 +10,15 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, viewsets
 
-from django.contrib.auth.models import User
-
-from serializers import UserSerializer
-
 # Django REST Authentication
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
+
+from django.contrib.auth.models import User
+
+from serializers import UserSerializer
+from utils import success_response, error_response
+
 
 logging.basicConfig(filename='/home/apelegrina/logs/user/narwhals.log',level=logging.DEBUG,
         format='%(asctime)s.%(msecs)d %(levelname)s %(module)s - %(funcName)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
@@ -41,7 +43,7 @@ class WorkoutList(APIView):
     def get(self, request, format=None):
         workouts = Workout.objects.filter(user=request.user)
         serializer = WorkoutSerializer(workouts, many=True)
-        return Response(serializer.data)
+        return Response(success_response(serializer.data))
 
     def post(self, request, format=None):
         serializer = WorkoutSerializer(data=request.data, many=True)
