@@ -95,7 +95,7 @@ class ConfigView(APIView):
     def get(self, request):
         key_provided = request.GET.get('api_key', '')
         version = getattr(settings, 'min_app_version', 1)
-        force_update = getattr(settings, 'force_update', 'true')
+        force_update = getattr(settings, 'force_update', True)
         config = {'min_app_version': version,
                   'force_update': force_update,}
         return Response(success_response(config), status=status.HTTP_200_OK)

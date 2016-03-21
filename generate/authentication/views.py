@@ -1,5 +1,5 @@
 from rest_framework import parsers, renderers
-from rest_framework import viewsets
+from rest_framework import viewsets, exceptions
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.response import Response
@@ -12,6 +12,25 @@ from utils.helpers import success_response, error_response
 from serializers import UserSerializer
 from models import User
 from utils.decorators import api_key_checker
+
+ 
+class CustomTokenAuthentication(TokenAuthentication):
+    """
+    Overriding for custom error message.
+    """
+    def authenticate_credentials(self, key):
+        try:
+            token = self.model.objects.select_related('user').get(key=key)
+        except self.model.DoesNotExist:
+            # modify the original exception response
+            raise exceptions.APIException("Token not valid.")
+
+        if not token.user.is_active:
+            # can also modify this exception message
+            return Response(error_response("User inactive or deleted."))
+
+        return (token.user, token)
+
 
 class UserView(viewsets.ModelViewSet):
     """
@@ -45,4 +64,16 @@ class ObtainAuthToken(APIView):
             return Response(success_response(user_serialized.data))
         else:
             return Response(error_response("User or password incorrect."))
+
+
+class CheckSession(APIView):
+    """
+    Validates if the session is still valid.
+    """
+    authentication_classes = (CustomTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    @api_key_checker
+    def get(self, request, *args, **kwargs):
+        return Response(success_response("The current session is valid."))
 
