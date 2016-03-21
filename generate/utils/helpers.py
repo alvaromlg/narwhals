@@ -1,4 +1,3 @@
-
 def success_response(data):
     """
     {  

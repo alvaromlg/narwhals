@@ -45,6 +45,7 @@ INSTALLED_APPS = (
 
     'narwhals',
     'authentication',
+    'utils',
 )
 
 MIDDLEWARE_CLASSES = (
