@@ -1,5 +1,6 @@
 from rest_framework import parsers, renderers
 from rest_framework import viewsets, exceptions
+from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.response import Response
@@ -32,15 +33,22 @@ class CustomTokenAuthentication(TokenAuthentication):
         return (token.user, token)
 
 
-class UserView(viewsets.ModelViewSet):
+class UserList(APIView):
     """
-    API endpoint for User
+    Creates a new user.
     """
     authentication_classes = (BasicAuthentication, TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
-    serializer_class = UserSerializer
-    model = User
+    def post(self, request, format=None):
+        serializer = UserSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(success_response(serializer.data),
+                            status=status.HTTP_201_CREATED)
+        return Response(error_response(serializer.errors),
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 class ObtainAuthToken(APIView):
@@ -75,5 +83,6 @@ class CheckSession(APIView):
 
     @api_key_checker
     def get(self, request, *args, **kwargs):
-        return Response(success_response("The current session is valid."))
+        user_serialized = UserSerializer(request.user)
+        return Response(success_response(user_serialized.data))
 
