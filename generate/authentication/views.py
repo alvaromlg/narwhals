@@ -41,6 +41,12 @@ class UserList(APIView):
     permission_classes = (IsAuthenticated,)
 
     @api_key_checker
+    def get(self, request, format=None):
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(success_response(serializer.data))
+
+    @api_key_checker
     def post(self, request, format=None):
         serializer = UserSerializer(data=request.data)
 
