@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 # Django REST Authentication
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
 
 from utils.helpers import success_response, error_response
 from serializers import UserSerializer
@@ -16,12 +16,26 @@ from authentication.models import User
 from utils.decorators import api_key_checker
 
 
+SAFE_METHODS = ['POST']
+
+class IsAuthenticatedOrReadOnly(BasePermission):
+    """
+    The request is authenticated as a user, or is a read-only request.
+    """
+
+    def has_permission(self, request, view):
+        if (request.method in SAFE_METHODS or
+            request.user and
+            request.user.is_authenticated()):
+            return True
+        return False
+
 class UserList(APIView):
     """
     Creates a new user.
     """
     authentication_classes = (BasicAuthentication, TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticatedOrReadOnly,)
 
     @api_key_checker
     def get(self, request, format=None):
