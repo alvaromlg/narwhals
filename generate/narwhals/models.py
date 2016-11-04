@@ -4,11 +4,14 @@ from django.conf import settings
 # Future translation
 from django.utils.translation import ugettext_lazy as _
 
+SWIMMING = 0
+CYCLING = 1
+HIKING = 2
 
 SPORT_CHOICES = (
-    ('0', 'swimming'),
-    ('1', 'cycling'),
-    ('2', 'hiking')
+    (SWIMMING, 'swimming'),
+    (CYCLING, 'cycling'),
+    (HIKING, 'hiking')
 )
 
 class Workout(models.Model):
@@ -18,8 +21,7 @@ class Workout(models.Model):
 
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
-    sport = models.CharField(max_length=1, choices=SPORT_CHOICES, 
-                                blank=True, null=True)
+    sport = models.IntegerField(default=0, choices=SPORT_CHOICES)
     description = models.CharField(max_length=500, blank=True, null=True)
     dateStart = models.DateTimeField(verbose_name=_('Creation date'), 
                                 help_text=_('Date of the creation'),
