@@ -34,19 +34,19 @@ class User(EmailAbstractUser):
                                    blank=True, null=True)
     meters = models.IntegerField(verbose_name=(_('Total meters.')),
                                    help_text=_('Total meters.'),
-                                   blank=True, null=True)
+                                   blank=True, default=0)
     minutes = models.IntegerField(verbose_name=(_('Total minutes.')),
                                    help_text=_('Total minutes.'),
-                                   blank=True, null=True)
+                                   blank=True, default=0)
     strokes = models.IntegerField(verbose_name=(_('Total strokes.')),
                                    help_text=_('Total strokes'),
-                                   blank=True, null=True)
+                                   blank=True, default=0)
     metersAverage = models.IntegerField(verbose_name=(_('Meters average.')),
                                    help_text=_('Meters average.'),
-                                   blank=True, null=True)
+                                   blank=True, default=0)
     minutesAverage = models.IntegerField(verbose_name=(_('Minutes average.')),
                                    help_text=_('Minutes average'),
-                                   blank=True, null=True)
+                                   blank=True, default=0)
     city_id = models.IntegerField(verbose_name=(_('??')),
                                    help_text=_('??'),
                                    blank=True, null=True)
