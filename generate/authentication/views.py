@@ -5,32 +5,15 @@ from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 # Django REST Authentication
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 
 from utils.helpers import success_response, error_response
 from serializers import UserSerializer
-from models import User
+from authentication.models import User
 from utils.decorators import api_key_checker
-
- 
-class CustomTokenAuthentication(TokenAuthentication):
-    """
-    Overriding for custom error message.
-    """
-    def authenticate_credentials(self, key):
-        try:
-            token = self.model.objects.select_related('user').get(key=key)
-        except self.model.DoesNotExist:
-            # modify the original exception response
-            raise exceptions.APIException("Token not valid.")
-
-        if not token.user.is_active:
-            # can also modify this exception message
-            return Response(error_response("User inactive or deleted."))
-
-        return (token.user, token)
 
 
 class UserList(APIView):
@@ -51,7 +34,12 @@ class UserList(APIView):
         serializer = UserSerializer(data=request.data)
 
         if serializer.is_valid():
-            serializer.save()
+            if not 'password' in request.data:
+                return Response(error_response('Password not provided.'),
+                                status=status.HTTP_400_BAD_REQUEST)
+            else:
+                user = serializer.save()
+                user.set_password(request.data['password'])
             return Response(success_response(serializer.data),
                             status=status.HTTP_201_CREATED)
         return Response(error_response(serializer.errors),
@@ -68,13 +56,14 @@ class UserList(APIView):
         return Response(error_response(serializer.errors),
                         status=status.HTTP_400_BAD_REQUEST)
 
+    """
     @api_key_checker
     def delete(self, request, format=None):
         user = self.get_object(pk, request.user)
         user.delete()
         return Response(success_response("null"),
                         status=status.HTTP_204_NO_CONTENT)
-
+    """
 
 class ObtainAuthToken(APIView):
     """
@@ -103,11 +92,22 @@ class CheckSession(APIView):
     """
     Validates if the session is still valid.
     """
-    authentication_classes = (CustomTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     @api_key_checker
     def get(self, request, *args, **kwargs):
+        try:
+            provided_token = request.META['HTTP_AUTHORIZATION']
+            provided_token = provided_token.replace('Token ', '')
+            token = Token.objects.select_related('user').get(key=provided_token)
+        except self.model.DoesNotExist:
+            # modify the original exception response
+            raise exceptions.APIException("Token not valid.")
+
+        if not token.user.is_active:
+            # can also modify this exception message
+            return Response(error_response("User inactive or deleted."))
+
         user_serialized = UserSerializer(request.user)
         return Response(success_response(user_serialized.data))
 

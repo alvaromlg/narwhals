@@ -1,8 +1,8 @@
 from django.contrib import admin
+from django.contrib.auth import get_user_model
+from authemail.admin import EmailUserAdmin
 
-from authentication.models import User
-
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(EmailUserAdmin):
     list_display = ("email",
                     "date_of_birth",
                     "position",
@@ -16,4 +16,5 @@ class UserAdmin(admin.ModelAdmin):
                     "surname",
                     "trend")
 
-admin.site.register(User, UserAdmin)
+admin.site.unregister(get_user_model())
+admin.site.register(get_user_model(), UserAdmin)

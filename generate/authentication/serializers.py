@@ -11,7 +11,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'last_login', 'email', 'date_of_birth', 'position',
                   'meters', 'minutes', 'strokes', 'metersAverage',
                   'minutesAverage', 'city_id', 'name', 'surname', 'trend',
-                  'bio', 'avatar', 'token', 'password')
+                  'bio', 'avatar', 'token')
         write_only_fields = ('password',)
         read_only_fields = ('is_admin', 'is_active',)
 
@@ -21,6 +21,5 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = User.objects.create(**validated_data)
-        user.set_password(validated_data["password"])
         user.save()
         return user
