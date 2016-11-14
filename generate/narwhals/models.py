@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.signals import post_save, pre_save, post_delete
+from django.dispatch import receiver
 from django.conf import settings
 
 # Future translation
@@ -13,6 +15,7 @@ SPORT_CHOICES = (
     (CYCLING, 'cycling'),
     (HIKING, 'hiking')
 )
+
 
 class Workout(models.Model):
     """
@@ -55,3 +58,42 @@ class Workout(models.Model):
     def __unicode__(self):
         return "%s's workout" % self.user.email
 
+
+# Trigger to update user data after workout save
+# Adding distance, time and strokes to the User's total profile data
+@receiver(post_save, sender=Workout)
+def user_total_sum_create(sender, instance=None, created=False, **kwargs):
+    user = instance.user
+    if created:
+        user.meters += instance.distance
+        user.minutes += instance.duration
+        user.strokes += instance.strokes
+        user.save()
+
+# When updating instead creating
+@receiver(pre_save, sender=Workout)
+def user_total_sum_update(sender, instance=None, **kwargs):
+    user = instance.user
+    # Get old values
+    old_workout = Workout.objects.get(id=instance.id)
+    old_meters = old_workout.distance
+    old_minutes = old_workout.duration
+    old_strokes = old_workout.strokes
+    # Substract old values
+    user.meters -= old_meters
+    user.minutes -= old_minutes
+    user.strokes -= old_strokes
+    # Add new values
+    user.meters += instance.distance
+    user.minutes += instance.duration
+    user.strokes += instance.strokes
+    user.save()
+
+# When deleting a workout
+@receiver(post_delete, sender=Workout)
+def user_total_sum(sender, instance=None, **kwargs):
+    user = instance.user
+    user.meters -= instance.distance
+    user.minutes -= instance.duration
+    user.strokes -= instance.strokes
+    user.save()
