@@ -12,9 +12,16 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+
+        migrations.RunSQL('SET CONSTRAINTS ALL IMMEDIATE',
+                          reverse_sql=migrations.RunSQL.noop),
+
         migrations.AlterField(
             model_name='workout',
             name='sport',
             field=models.IntegerField(choices=[(0, b'swimming'), (1, b'cycling'), (2, b'hiking')], default=0),
         ),
+
+        migrations.RunSQL(migrations.RunSQL.noop,
+                          reverse_sql='SET CONSTRAINTS ALL IMMEDIATE'),
     ]

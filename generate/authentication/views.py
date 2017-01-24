@@ -11,9 +11,11 @@ from rest_framework.authentication import TokenAuthentication, BasicAuthenticati
 from rest_framework.permissions import IsAuthenticated, BasePermission
 
 from utils.helpers import success_response, error_response
+from serializers import SwimmerSerializer, RunnerSerializer
 from serializers import UserSerializer
-from authentication.models import User
+from authentication.models import User, SPORTS
 from utils.decorators import api_key_checker
+from utils.decorators import sport_checker
 
 
 SAFE_METHODS = ['POST']
@@ -38,14 +40,26 @@ class UserList(APIView):
     permission_classes = (IsAuthenticatedOrReadOnly,)
 
     @api_key_checker
+    @sport_checker
     def get(self, request, format=None):
-        users = User.objects.all()
-        serializer = UserSerializer(users, many=True)
+        sport = request.data.get('sport', '')
+        if sport == 0:
+            swimmers = Swimmer.objects.all()
+            serializer = SwimmerSerializer(swimmers, many=True)
+        elif sport == 1:
+            runners = Runner.objects.all()
+            serializer = RunnerSerializer(runners, many=True)
         return Response(success_response(serializer.data))
 
     @api_key_checker
-    def post(self, request, format=None):
-        serializer = UserSerializer(data=request.data)
+    @sport_checker
+    def post(self, request, format=None, sport=None):
+        sport = int(request.data.get('sport', '0'))
+        if sport == 0:
+            serializer = SwimmerSerializer(data=request.data)
+        elif sport == 1:
+            user = UserSerializer(data=request.data)
+            serializer = RunnerSerializer(data=request.data)
 
         if serializer.is_valid():
             if not 'password' in request.data:
@@ -60,9 +74,14 @@ class UserList(APIView):
                         status=status.HTTP_400_BAD_REQUEST)
 
     @api_key_checker
+    @sport_checker
     def put(self, request, format=None):
         user = request.user
-        serializer = UserSerializer(user, data=request.data, partial=True)
+        sport = request.data.get('sport', '')
+        if sport == 0:
+            serializer = SwimmerSerializer(user, data=request.data, partial=True)
+        elif sport == 1:
+            serializer = RunnerSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(success_response(serializer.data),
@@ -91,12 +110,18 @@ class ObtainAuthToken(APIView):
     serializer_class = AuthTokenSerializer
 
     @api_key_checker
+    @sport_checker
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
+        sport = request.data.get('sport', '')
         if serializer.is_valid():
             user = serializer.validated_data['user']
             token, created = Token.objects.get_or_create(user=user)
-            user_serialized = UserSerializer(user)
+            if sport == 0:
+                user_serialized = SwimmerSerializer(user)
+            elif sport == 1:
+                user_serialized = RunnerSerializer(user)
+            import pdb; pdb.set_trace()
             return Response(success_response(user_serialized.data))
         else:
             return Response(error_response("User or password incorrect."))
@@ -109,6 +134,7 @@ class CheckSession(APIView):
     permission_classes = (IsAuthenticated,)
 
     @api_key_checker
+    @sport_checker
     def get(self, request, *args, **kwargs):
         try:
             provided_token = request.META['HTTP_AUTHORIZATION']
@@ -122,6 +148,10 @@ class CheckSession(APIView):
             # can also modify this exception message
             return Response(error_response("User inactive or deleted."))
 
-        user_serialized = UserSerializer(request.user)
+        sport = request.data.get('sport', '')
+        if sport == 0:
+            user_serialized = SwimmerSerializer(request.user)
+        elif sport == 1:
+            user_serialized = RunnerSerializer(request.user)
         return Response(success_response(user_serialized.data))
 
