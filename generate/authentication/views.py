@@ -14,6 +14,7 @@ from utils.helpers import success_response, error_response
 from serializers import SwimmerSerializer, RunnerSerializer
 from serializers import UserSerializer
 from authentication.models import User, SPORTS
+from authentication.models import Swimmer, Runner
 from utils.decorators import api_key_checker
 from utils.decorators import sport_checker
 
@@ -54,22 +55,55 @@ class UserList(APIView):
     @api_key_checker
     @sport_checker
     def post(self, request, format=None, sport=None):
-        sport = int(request.data.get('sport', '0'))
-        if sport == 0:
-            serializer = SwimmerSerializer(data=request.data)
-        elif sport == 1:
-            user = UserSerializer(data=request.data)
-            serializer = RunnerSerializer(data=request.data)
+        email = request.data['email']
+        existing_user = User.objects.get(email=email)
+        if existing_user:
+            return Response(error_response('User with email %s already exists.'
+                                           % email),
+                            status=status.HTTP_400_BAD_REQUEST)
 
-        if serializer.is_valid():
+        sport = int(request.data.get('sport', '0'))
+        user = UserSerializer()
+        user_fields = [key for key in user.get_fields().keys()]
+        user_data = { key: request.data[key]
+                      for key in user_fields
+                      if key in request.data }
+        user_data['type_id'] = SPORTS[sport][1] 
+        user_serializer = UserSerializer(data=user_data)
+
+        # Create base user
+        if user_serializer.is_valid():
             if not 'password' in request.data:
                 return Response(error_response('Password not provided.'),
                                 status=status.HTTP_400_BAD_REQUEST)
             else:
-                user = serializer.save()
+                user = user_serializer.save()
                 user.set_password(request.data['password'])
+
+        # Create specific user (swimmer, runner...)
+        if sport == 0:
+            swimmer = SwimmerSerializer()
+            swimmer_fields = [key for key in SwimmerSerializer.specific_fields]
+            swimmer_data = { key: request.data[key]
+                            for key in swimmer_fields
+                            if key in request.data }
+            swimmer_data['type'] = user.id
+            serializer = SwimmerSerializer(data=swimmer_data)
+
+        elif sport == 1:
+            runner = RunnerSerializer()
+            runner_fields = [key for key in RunnerSerializer.specific_fields]
+            runner_data = { key: request.data[key]
+                            for key in runner_fields
+                            if key in request.data }
+            runner_data['type'] = user.id
+            serializer = RunnerSerializer(data=runner_data)
+
+        if serializer.is_valid():
+            sport_user = serializer.save()
             return Response(success_response(serializer.data),
                             status=status.HTTP_201_CREATED)
+
         return Response(error_response(serializer.errors),
                         status=status.HTTP_400_BAD_REQUEST)
 
@@ -110,18 +144,18 @@ class ObtainAuthToken(APIView):
     serializer_class = AuthTokenSerializer
 
     @api_key_checker
-    @sport_checker
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
-        sport = request.data.get('sport', '')
+        sport = int(request.data.get('sport', ''))
         if serializer.is_valid():
             user = serializer.validated_data['user']
             token, created = Token.objects.get_or_create(user=user)
             if sport == 0:
+                swimmer = Swimmer.objects.get(type=user.id)
                 user_serialized = SwimmerSerializer(user)
             elif sport == 1:
-                user_serialized = RunnerSerializer(user)
-            import pdb; pdb.set_trace()
+                runner = Runner.objects.get(type=user.id)
+                user_serialized = RunnerSerializer(runner)
             return Response(success_response(user_serialized.data))
         else:
             return Response(error_response("User or password incorrect."))
@@ -140,7 +174,7 @@ class CheckSession(APIView):
             provided_token = request.META['HTTP_AUTHORIZATION']
             provided_token = provided_token.replace('Token ', '')
             token = Token.objects.select_related('user').get(key=provided_token)
-        except self.model.DoesNotExist:
+        except Exception as e:
             # modify the original exception response
             raise exceptions.APIException("Token not valid.")
 
@@ -148,10 +182,17 @@ class CheckSession(APIView):
             # can also modify this exception message
             return Response(error_response("User inactive or deleted."))
 
-        sport = request.data.get('sport', '')
+        try:
+            sport = int(request.data.get('sport', ''))
+        except:
+            sport = int(request.GET.get('sport', ''))
+
         if sport == 0:
-            user_serialized = SwimmerSerializer(request.user)
+            swimmer = Swimmer.objects.get(type=request.user.id)
+            user_serialized = SwimmerSerializer(swimmer)
         elif sport == 1:
-            user_serialized = RunnerSerializer(request.user)
+            runner = Runner.objects.get(type=request.user.id)
+            user_serialized = RunnerSerializer(runner)
+
         return Response(success_response(user_serialized.data))
 

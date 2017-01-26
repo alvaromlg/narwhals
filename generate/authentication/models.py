@@ -14,8 +14,8 @@ from django.utils.translation import ugettext_lazy as _
 SWIMMING = 0
 RUNNING = 1 
 SPORTS = (
-        (SWIMMING, 'swimming'),
-        (RUNNING, 'running'),
+        (SWIMMING, 'S'),
+        (RUNNING, 'R'),
 )
 
 UP = 'up';
