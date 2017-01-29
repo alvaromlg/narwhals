@@ -19,7 +19,7 @@ from utils.decorators import api_key_checker
 from utils.decorators import sport_checker
 
 
-SAFE_METHODS = ['POST']
+SAFE_METHODS = ['POST', 'PUT']
 
 class IsAuthenticatedOrReadOnly(BasePermission):
     """
@@ -55,12 +55,14 @@ class UserList(APIView):
     @api_key_checker
     @sport_checker
     def post(self, request, format=None, sport=None):
-        email = request.data['email']
-        existing_user = User.objects.get(email=email)
-        if existing_user:
+        try:
+            email = request.data['email']
+            existing_user = User.objects.get(email=email)
             return Response(error_response('User with email %s already exists.'
                                            % email),
                             status=status.HTTP_400_BAD_REQUEST)
+        except:
+            pass
 
         sport = int(request.data.get('sport', '0'))
         user = UserSerializer()
@@ -79,6 +81,7 @@ class UserList(APIView):
             else:
                 user = user_serializer.save()
                 user.set_password(request.data['password'])
+                user.save()
 
         # Create specific user (swimmer, runner...)
         if sport == 0:
@@ -107,15 +110,50 @@ class UserList(APIView):
         return Response(error_response(serializer.errors),
                         status=status.HTTP_400_BAD_REQUEST)
 
+
+class UserDetail(APIView):
+
+    authentication_classes = (BasicAuthentication, TokenAuthentication,)
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+
     @api_key_checker
     @sport_checker
-    def put(self, request, format=None):
-        user = request.user
-        sport = request.data.get('sport', '')
+    def put(self, request, pk, format=None):
+        user = User.objects.get(id=pk)
+        user_serializer = UserSerializer()
+        sport = int(request.data.get('sport', ''))
+        user_data = { key: request.data[key]
+                      for key in user_serializer.fields
+                      if key in request.data }
+        for (key, value) in user_data.items():
+            setattr(user, key, value)
+        user.save()
         if sport == 0:
-            serializer = SwimmerSerializer(user, data=request.data, partial=True)
+            try:
+                swimmer = Swimmer.objects.get(type__id=user.id)
+            except Swimmer.DoesNotExist:
+                return Response(error_response('Swimmer does not exist'),
+                                status=status.HTTP_404_NOT_FOUND)
+            swimmer_fields = [key for key in SwimmerSerializer.specific_fields]
+            swimmer_data = { key: request.data[key]
+                            for key in swimmer_fields
+                            if key in request.data }
+            swimmer_data['type'] = user.id
+            serializer = SwimmerSerializer(swimmer, data=swimmer_data, partial=True)
+
         elif sport == 1:
-            serializer = RunnerSerializer(user, data=request.data, partial=True)
+            try:
+                runner = Runner.objects.get(type__id=user.id)
+            except Runner.DoesNotExist:
+                return Response(error_response('Runner does not exist'),
+                                status=status.HTTP_404_NOT_FOUND)
+            runner_fields = [key for key in RunnerSerializer.specific_fields]
+            runner_data = { key: request.data[key]
+                            for key in runner_fields
+                            if key in request.data }
+            runner_data['type'] = user.id
+            serializer = RunnerSerializer(runner, data=runner_data, partial=True)
+
         if serializer.is_valid():
             serializer.save()
             return Response(success_response(serializer.data),

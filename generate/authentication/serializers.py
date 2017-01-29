@@ -1,7 +1,9 @@
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
+from django.conf import settings
 
 from models import User, Swimmer, Runner
+
 
 class UserSerializer(serializers.ModelSerializer):
     token = serializers.SerializerMethodField()
@@ -48,6 +50,8 @@ class SwimmerSerializer(serializers.ModelSerializer):
                   'id', 'last_login', 'email', 'date_of_birth',
                   'city_id', 'name', 'surname',
                   'bio', 'avatar', 'token')
+        read_only_fields = ('position', 'meters', 'minutes', 'trend', 'type', 
+                            'id', 'last_login')
 
     def get_token(self, user):
         token = Token.objects.get(user=user.type.id)
@@ -69,8 +73,10 @@ class RunnerSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source='type.name', required=False, allow_null=True)
     surname = serializers.CharField(source='type.surname', required=False, allow_null=True)
     bio = serializers.CharField(source='type.bio', required=False, allow_null=True)
-    avatar = serializers.CharField(source='type.avatar', required=False, allow_null=True)
+    #avatar = serializers.ImageField(source='type.avatar', required=False, allow_null=True)
     token = serializers.SerializerMethodField(source='type.token', required=False, allow_null=True)
+
+    avatar = serializers.SerializerMethodField()
 
     specific_fields = ['position', 'meters', 'minutes',
                        'trend', 'type']
@@ -83,10 +89,18 @@ class RunnerSerializer(serializers.ModelSerializer):
                   'id', 'last_login', 'email', 'date_of_birth',
                   'city_id', 'name', 'surname',
                   'bio', 'avatar', 'token')
+        read_only_fields = ('position', 'meters', 'minutes', 'trend', 'type',
+                            'id', 'last_login')
 
     def get_token(self, user):
         token = Token.objects.get(user=user.type.id)
         return token.key
+
+    def get_avatar(self, user):
+        try:
+            return settings.SERVER_URL + user.type.avatar.url
+        except:
+            return ''
 
     def create(self, validated_data):
         user = Runner.objects.create(**validated_data)
