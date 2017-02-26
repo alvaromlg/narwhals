@@ -40,7 +40,7 @@ class WorkoutList(APIView):
     @api_key_checker
     def get(self, request, format=None):
         paginator = CustomPagination()
-        sport = int(request.data.get('sport', ''))
+        sport = int(request.query_params.get('sport'))
         if sport == 0:
             try:
                 swimmer = Swimmer.objects.get(type__id=request.user.id)
@@ -53,7 +53,7 @@ class WorkoutList(APIView):
         elif sport == 1:
             try:
                 runner = Runner.objects.get(type_id=request.user.id)
-                run_workouts = RunWorkouts.objects.filter(user=request.user).order_by('-dateStart')
+                run_workouts = RunWorkout.objects.filter(user=runner).order_by('-dateStart')
                 serializer = RunWorkoutSerializer(run_workouts, many=True)
             except:
                 return Response(error_response('This user has not a runner profile enabled.'),
